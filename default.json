@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "packageRules": [
+    {
+      "description": "Auto-merge minor and patch updates when CI is green",
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "squash"
+    },
+    {
+      "description": "Docker CI actions (docker/*) release together",
+      "groupName": "docker GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "matchPackagePatterns": ["^docker/"]
+    }
+  ]
+}

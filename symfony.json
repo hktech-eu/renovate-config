@@ -1,0 +1,11 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "packageRules": [
+    {
+      "description": "Symfony packages version in lockstep — single PR per update cycle",
+      "groupName": "Symfony",
+      "matchManagers": ["composer"],
+      "matchPackagePatterns": ["^symfony/"]
+    }
+  ]
+}
