@@ -1,7 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
+  "rangeStrategy": "pin",
   "packageRules": [
+    {
+      "description": "No digests for Docker and GitHub Actions — x.y.z only",
+      "matchManagers": ["docker", "github-actions"],
+      "pinDigests": false
+    },
     {
       "description": "Auto-merge minor and patch updates when CI is green",
       "matchUpdateTypes": ["minor", "patch"],
