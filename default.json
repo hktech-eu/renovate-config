@@ -3,6 +3,7 @@
   "extends": ["config:recommended"],
   "rangeStrategy": "pin",
   "platformAutomerge": false,
+  "rebaseWhen": "conflicted",
   "packageRules": [
     {
       "description": "No digests for Docker and GitHub Actions — x.y.z only",
