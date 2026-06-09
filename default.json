@@ -2,6 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "rangeStrategy": "pin",
+  "platformAutomerge": false,
   "packageRules": [
     {
       "description": "No digests for Docker and GitHub Actions — x.y.z only",
