@@ -1,0 +1,10 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "packageRules": [
+    {
+      "description": "Group Dockerfile PHP tag and composer.json PHP pin into one PR",
+      "matchDepNames": ["php-runtime", "frankenphp-php", "dunglas/frankenphp"],
+      "groupName": "PHP version"
+    }
+  ]
+}
