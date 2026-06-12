@@ -3,7 +3,7 @@
   "packageRules": [
     {
       "description": "Group Dockerfile PHP tag and composer.json PHP pin into one PR",
-      "matchDepNames": ["php-runtime", "frankenphp-php", "dunglas/frankenphp"],
+      "matchDepNames": ["frankenphp-php", "php", "dunglas/frankenphp"],
       "groupName": "PHP version"
     }
   ]
