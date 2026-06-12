@@ -1,0 +1,24 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate Renovate config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON syntax
+        run: |
+          for f in *.json; do
+            echo "Checking $f..."
+            python3 -m json.tool "$f" > /dev/null
+          done
+
+      - name: Validate Renovate config
+        run: npx --yes --package renovate@latest renovate-config-validator
