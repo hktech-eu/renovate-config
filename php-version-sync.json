@@ -5,6 +5,12 @@
       "description": "Group Dockerfile PHP tag and composer.json PHP pin into one PR",
       "matchDepNames": ["frankenphp-php", "php", "dunglas/frankenphp"],
       "groupName": "PHP version"
+    },
+    {
+      "description": "Let postUpgradeTasks handle composer.lock — Composer manager cannot update php platform packages",
+      "matchManagers": ["composer"],
+      "matchDepNames": ["php"],
+      "updateLockFiles": false
     }
   ]
 }
