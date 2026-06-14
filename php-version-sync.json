@@ -2,14 +2,9 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "packageRules": [
     {
-      "description": "Group Dockerfile PHP tag and composer.json PHP pin into one PR",
+      "description": "Group Dockerfile PHP tag and composer.json PHP pin into one PR — skip artifact update for the whole group so postUpgradeTasks handles composer.lock",
       "matchDepNames": ["frankenphp-php", "php", "dunglas/frankenphp"],
-      "groupName": "PHP version"
-    },
-    {
-      "description": "Let postUpgradeTasks handle composer.lock — Composer manager cannot update php platform packages",
-      "matchManagers": ["composer"],
-      "matchDepNames": ["php"],
+      "groupName": "PHP version",
       "updateLockFiles": false
     }
   ]
