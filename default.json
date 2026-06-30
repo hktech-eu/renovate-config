@@ -11,8 +11,8 @@
       "pinDigests": false
     },
     {
-      "description": "Auto-merge minor and patch updates when CI is green",
-      "matchUpdateTypes": ["minor", "patch"],
+      "description": "Auto-merge minor, patch and pin updates when CI is green",
+      "matchUpdateTypes": ["minor", "patch", "pin"],
       "automerge": true,
       "automergeType": "squash"
     },
