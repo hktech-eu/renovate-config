@@ -28,9 +28,9 @@ Add only the presets that apply to the project.
 ## PHP version sync
 
 The FrankenPHP image tag is the PHP source of truth. The preset makes Renovate bump the
-whole tag (for example `1.12.7-php8.5.9` to `1.13.4-php8.5.12`) and stops stand-alone
-composer `php` bumps. The project must sync `composer.json` and `composer.lock` from the
-new tag with a `postUpgradeTasks` rule, because the paths differ per project.
+whole `<frankenphp>-php<php>` tag as one update and stops stand-alone composer `php`
+bumps. The project must sync `composer.json` and `composer.lock` from the new tag with
+a `postUpgradeTasks` rule, because the paths differ per project.
 
 See [`docs/php-version-sync.md`](docs/php-version-sync.md) for the rule to copy and the
 command allowlist.

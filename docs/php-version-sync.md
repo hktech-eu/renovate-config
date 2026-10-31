@@ -2,15 +2,15 @@
 
 ## The problem
 
-A FrankenPHP image tag holds two versions: `dunglas/frankenphp:<frankenphp>-php<php>`,
-for example `1.13.4-php8.5.12`. Not every pair is built. A new PHP patch ships only
-on the current FrankenPHP release, so `1.12.7-php8.5.12` does not exist.
+A FrankenPHP image tag holds two versions: `dunglas/frankenphp:<frankenphp>-php<php>`.
+Not every pair is built. A new PHP patch ships only on the current FrankenPHP release,
+so an older FrankenPHP version combined with the newest PHP patch does not exist.
 
 Two things went wrong with the default setup:
 
 | Cause | Effect |
 |---|---|
-| Docker versioning reads `-php8.5.9` as a fixed suffix | Renovate never offers a new FrankenPHP tag |
+| Docker versioning reads `-php<php>` as a fixed suffix | Renovate never offers a new FrankenPHP tag |
 | The `php` pin in `composer.json` was bumped on its own, and the Dockerfile suffix followed it | The PR named a tag that was never built, and the image build failed |
 
 ## The model
@@ -18,7 +18,7 @@ Two things went wrong with the default setup:
 The image tag is the single source of truth for the PHP version.
 
 1. The preset gives `dunglas/frankenphp` a `regex:` versioning. FrankenPHP
-   major/minor/patch and the PHP patch can go up. The PHP minor (`8.5`) is the
+   major/minor/patch and the PHP patch can go up. The PHP major.minor is the
    compatibility part, so a PHP minor upgrade stays a manual change.
 2. The preset disables the composer `php` dependency, so Renovate never bumps it
    on its own.
@@ -72,7 +72,7 @@ RENOVATE_ALLOWED_COMMANDS: '[
 
 **`composer require --no-update php:<version>`**
 Sets the exact `php` pin in `composer.json` to the PHP version from the new tag.
-`{{{replace '^.*-php' '' newValue}}}` turns `1.13.4-php8.5.12` into `8.5.12`.
+`{{{replace '^.*-php' '' newValue}}}` keeps only the `<php>` part of the new tag.
 
 **`composer update --lock`**
 Recomputes `content-hash` and updates `platform.php` in `composer.lock`. It does
