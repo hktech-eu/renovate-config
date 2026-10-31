@@ -2,87 +2,90 @@
 
 ## The problem
 
-When Renovate bumps the `php` version in `composer.json`, it can't install
-the new PHP binary to regenerate `composer.lock` (the version isn't in
-containerbase yet). Without extra configuration, only `composer.json` changes
-— `composer.lock` and `Dockerfile` are left stale, and CI fails.
+A FrankenPHP image tag holds two versions: `dunglas/frankenphp:<frankenphp>-php<php>`,
+for example `1.13.4-php8.5.12`. Not every pair is built. A new PHP patch ships only
+on the current FrankenPHP release, so `1.12.7-php8.5.12` does not exist.
 
-**What needs to happen in one PR:**
+Two things went wrong with the default setup:
 
-| File | What changes |
+| Cause | Effect |
 |---|---|
-| `composer.json` | PHP version bumped by Renovate |
-| `composer.lock` | `content-hash` recomputed, `platform.php` updated |
-| `Dockerfile` | Base image PHP suffix updated (e.g. `-php8.4.1` → `-php8.4.2`) |
+| Docker versioning reads `-php8.5.9` as a fixed suffix | Renovate never offers a new FrankenPHP tag |
+| The `php` pin in `composer.json` was bumped on its own, and the Dockerfile suffix followed it | The PR named a tag that was never built, and the image build failed |
 
-## The fix
+## The model
 
-Add this rule to `packageRules` in the project's `renovate.json`, adjusting
-the paths to match where `composer.json`, `composer.lock`, and `Dockerfile`
-live in that project:
+The image tag is the single source of truth for the PHP version.
+
+1. The preset gives `dunglas/frankenphp` a `regex:` versioning. FrankenPHP
+   major/minor/patch and the PHP patch can go up. The PHP minor (`8.5`) is the
+   compatibility part, so a PHP minor upgrade stays a manual change.
+2. The preset disables the composer `php` dependency, so Renovate never bumps it
+   on its own.
+3. The project syncs `composer.json` and `composer.lock` from the new tag with
+   `postUpgradeTasks`.
+
+Renovate only offers tags that exist on Docker Hub, so the PR always names an image
+that can be pulled.
+
+## Project setup
+
+Extend the preset:
+
+```json
+"extends": ["github>hktech-eu/renovate-config//php-version-sync"]
+```
+
+Add this rule to `packageRules` in the project's `renovate.json`. Replace `<php-dir>`
+with the directory that holds `composer.json`:
 
 ```json
 {
-  "description": "Sync composer.lock and Dockerfile when the php version is bumped",
-  "matchManagers": ["composer"],
-  "matchDepNames": ["php"],
+  "description": "Sync the composer php pin and lock file from the FrankenPHP image tag",
+  "matchDepNames": ["dunglas/frankenphp"],
   "postUpgradeTasks": {
     "commands": [
-      "composer -d <php-dir> update --no-install --ignore-platform-reqs --no-scripts",
-      "sed -i \"s/\\\"php\\\": \\\"[0-9][^\\\"]*\\\"/\\\"php\\\": \\\"{{{newValue}}}\\\"/\" <php-dir>/composer.lock",
-      "sed -i \"s/-php[0-9][0-9.]*/-php{{{newValue}}}/g\" <dockerfile>"
+      "composer -d <php-dir> require --no-update --no-scripts --no-plugins php:{{{replace '^.*-php' '' newValue}}}",
+      "composer -d <php-dir> update --lock --no-install --ignore-platform-reqs --no-scripts --no-plugins"
     ],
-    "fileFilters": ["<php-dir>/composer.lock", "<dockerfile>"]
+    "fileFilters": ["<php-dir>/composer.json", "<php-dir>/composer.lock"]
   }
 }
 ```
 
-Also add all three commands to `RENOVATE_ALLOWED_COMMANDS` in
-`.github/workflows/renovate.yml`:
+Allowlist both commands in `.github/workflows/renovate.yml`:
 
 ```yaml
 RENOVATE_ALLOWED_COMMANDS: '[
-  "^composer -d <php-dir> update --no-install --ignore-platform-reqs --no-scripts$",
-  "^sed -i \"s/.+\" <php-dir>/composer\\.lock$",
-  "^sed -i \"s/.+\" <dockerfile>$"
+  "^composer -d <php-dir> require --no-update --no-scripts --no-plugins php:\\d+\\.\\d+\\.\\d+$",
+  "^composer -d <php-dir> update --lock --no-install --ignore-platform-reqs --no-scripts --no-plugins$"
 ]'
 ```
 
-## Path reference by project structure
-
-| Structure | `<php-dir>` | `<dockerfile>` |
-|---|---|---|
-| `composer.json` at repo root | `.` (and drop `-d .`) | `Dockerfile` |
-| PHP app under `api/` | `api` | `api/Dockerfile` |
-| PHP app under `app/` | `app` | `app/Dockerfile` |
+| Project structure | `<php-dir>` |
+|---|---|
+| `composer.json` at repo root | `.` |
+| PHP app under `app/` | `app` |
+| PHP app under `api/` | `api` |
 
 ## What each command does
 
-**`composer -d <php-dir> update --no-install --ignore-platform-reqs --no-scripts`**
-Recomputes the `content-hash` in `composer.lock` to match the updated
-`composer.json`. Without this, `composer install` in CI rejects the lock file
-as stale. `--ignore-platform-reqs` allows running with the old PHP binary
-even though `composer.json` now requires the new version.
+**`composer require --no-update php:<version>`**
+Sets the exact `php` pin in `composer.json` to the PHP version from the new tag.
+`{{{replace '^.*-php' '' newValue}}}` turns `1.13.4-php8.5.12` into `8.5.12`.
 
-**`sed -i "s/\"php\": \"...\"/.../\" <php-dir>/composer.lock`**
-Patches the `platform.php` field in `composer.lock` to the new version.
-Composer doesn't update this field automatically when only the `require.php`
-constraint changes.
-
-**`sed -i "s/-php[0-9][0-9.]*/-php{{{newValue}}}/g" <dockerfile>`**
-Updates the PHP version suffix in the base image tag so that the Dockerfile,
-`composer.json`, and `composer.lock` all reference the same PHP version in
-one PR. Only applicable when using an image with an embedded PHP version in
-its tag (e.g. FrankenPHP: `dunglas/frankenphp:1.x.x-php8.4.1`).
+**`composer update --lock`**
+Recomputes `content-hash` and updates `platform.php` in `composer.lock`. It does
+not change any package. A plain `composer update` would update every package and
+turn the PHP PR into a full dependency update.
 
 ## Gotchas
 
 | Mistake | Effect |
 |---|---|
-| Rule not on `main` | Renovate reads config from the default branch — silently ignored on any other branch |
-| Wrong paths | Commands fail or modified files are discarded |
-| `fileFilters` path wrong | File is modified but not committed |
-| Any command in the sequence fails | Renovate aborts — subsequent commands never run |
-| `$(jq ...)` instead of `{{{newValue}}}` | `jq` may not be in the Renovate container; use the built-in template variable |
+| Rule not on `main` | Renovate reads config from the default branch and silently ignores it on any other branch |
 | Command missing from `RENOVATE_ALLOWED_COMMANDS` | Renovate silently skips it |
-| `executionMode` defaults to repo root | All paths in commands and `fileFilters` are relative to the repo root, not the package file directory |
+| `fileFilters` path wrong | The file changes but is not committed |
+| Any command fails | Renovate stops, and later commands do not run |
+| A custom manager that bumps the PHP part of the tag on its own | The same "tag never built" failure comes back; remove it |
+| `executionMode` defaults to repo root | Paths in commands and `fileFilters` are relative to the repo root |

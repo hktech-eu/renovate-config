@@ -8,6 +8,7 @@ Shared [Renovate](https://docs.renovatebot.com/) presets for HK Tech projects.
 |---|---|---|
 | `default.json` | `github>hktech-eu/renovate-config` | Auto-merge minor/patch when CI is green; group `docker/*` GitHub Actions |
 | `symfony.json` | `github>hktech-eu/renovate-config//symfony` | Group all `symfony/*` composer packages into one PR |
+| `php-version-sync.json` | `github>hktech-eu/renovate-config//php-version-sync` | Bump the FrankenPHP image tag (FrankenPHP + PHP patch) as one PR; disable stand-alone composer `php` bumps |
 
 ## Usage
 
@@ -26,48 +27,10 @@ Add only the presets that apply to the project.
 
 ## PHP version sync
 
-When Renovate bumps the `php` version in `composer.json`, three files must change in one PR:
+The FrankenPHP image tag is the PHP source of truth. The preset makes Renovate bump the
+whole tag (for example `1.12.7-php8.5.9` to `1.13.4-php8.5.12`) and stops stand-alone
+composer `php` bumps. The project must sync `composer.json` and `composer.lock` from the
+new tag with a `postUpgradeTasks` rule, because the paths differ per project.
 
-| File | What changes |
-|---|---|
-| `composer.json` | PHP version bumped by Renovate |
-| `composer.lock` | `content-hash` recomputed, `platform.php` updated |
-| `Dockerfile` | Base image PHP suffix updated (e.g. `-php8.4.1` → `-php8.4.2`) |
-
-This isn't a shareable preset because the file paths differ per project. Add this rule directly to the project's `renovate.json` and adjust the paths:
-
-```json
-{
-  "description": "Sync composer.lock and Dockerfile when the php version is bumped",
-  "matchManagers": ["composer"],
-  "matchDepNames": ["php"],
-  "postUpgradeTasks": {
-    "commands": [
-      "composer -d <php-dir> update --no-install --ignore-platform-reqs --no-scripts",
-      "sed -i \"s/\\\"php\\\": \\\"[0-9][^\\\"]*\\\"/\\\"php\\\": \\\"{{{newValue}}}\\\"/\" <php-dir>/composer.lock",
-      "sed -i \"s/-php[0-9][0-9.]*/-php{{{newValue}}}/g\" <dockerfile>"
-    ],
-    "fileFilters": ["<php-dir>/composer.lock", "<dockerfile>"]
-  }
-}
-```
-
-Also allowlist all three commands in `.github/workflows/renovate.yml`:
-
-```yaml
-RENOVATE_ALLOWED_COMMANDS: '[
-  "^composer -d <php-dir> update --no-install --ignore-platform-reqs --no-scripts$",
-  "^sed -i \"s/.+\" <php-dir>/composer\\.lock$",
-  "^sed -i \"s/.+\" <dockerfile>$"
-]'
-```
-
-Replace `<php-dir>` and `<dockerfile>` with the actual paths:
-
-| Project structure | `<php-dir>` | `<dockerfile>` |
-|---|---|---|
-| `composer.json` at repo root | `.` (and drop `-d .`) | `Dockerfile` |
-| PHP app under `app/` | `app` | `app/Dockerfile` |
-| PHP app under `api/` | `api` | `api/Dockerfile` |
-
-See [`docs/php-version-sync.md`](docs/php-version-sync.md) for the full explanation.
+See [`docs/php-version-sync.md`](docs/php-version-sync.md) for the rule to copy and the
+command allowlist.
