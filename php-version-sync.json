@@ -2,9 +2,16 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "packageRules": [
     {
-      "description": "Group Dockerfile PHP tag and composer.json PHP pin into one PR",
-      "matchDepNames": ["frankenphp-php", "php", "dunglas/frankenphp"],
+      "description": "FrankenPHP tags are <frankenphp>-php<php>; bump both together, keep the PHP minor fixed. Default docker versioning reads -php<php> as a fixed suffix and never offers a new tag.",
+      "matchDepNames": ["dunglas/frankenphp"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-php(?<compatibility>\\d+\\.\\d+)\\.(?<build>\\d+)$",
       "groupName": "PHP version"
+    },
+    {
+      "description": "The image tag is the PHP source of truth; a php bump on its own can name a tag that was never built. The project syncs composer.json from the tag.",
+      "matchManagers": ["composer"],
+      "matchDepNames": ["php"],
+      "enabled": false
     }
   ]
 }
